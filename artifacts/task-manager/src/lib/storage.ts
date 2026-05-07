@@ -72,13 +72,25 @@ const SEED_TASKS: Task[] = [
   }
 ];
 
+const safeParseJSON = <T>(stored: string | null, fallback: T): T => {
+  if (!stored || stored === "undefined" || stored.trim() === "") return fallback;
+  try {
+    const parsed = JSON.parse(stored);
+    if (parsed === null || parsed === undefined || !Array.isArray(parsed)) return fallback;
+    return parsed as T;
+  } catch {
+    return fallback;
+  }
+};
+
 export const loadCategories = (): Category[] => {
   const stored = localStorage.getItem(CATEGORIES_KEY);
-  if (!stored) {
+  const result = safeParseJSON<Category[]>(stored, []);
+  if (result.length === 0) {
     localStorage.setItem(CATEGORIES_KEY, JSON.stringify(SEED_CATEGORIES));
     return SEED_CATEGORIES;
   }
-  return JSON.parse(stored);
+  return result;
 };
 
 export const saveCategories = (categories: Category[]) => {
@@ -87,11 +99,17 @@ export const saveCategories = (categories: Category[]) => {
 
 export const loadTasks = (): Task[] => {
   const stored = localStorage.getItem(TASKS_KEY);
-  if (!stored) {
+  const result = safeParseJSON<Task[]>(stored, []);
+  if (result.length === 0 && !stored) {
     localStorage.setItem(TASKS_KEY, JSON.stringify(SEED_TASKS));
     return SEED_TASKS;
   }
-  return JSON.parse(stored);
+  if (result.length === 0 && stored !== null) {
+    localStorage.removeItem(TASKS_KEY);
+    localStorage.setItem(TASKS_KEY, JSON.stringify(SEED_TASKS));
+    return SEED_TASKS;
+  }
+  return result;
 };
 
 export const saveTasks = (tasks: Task[]) => {
